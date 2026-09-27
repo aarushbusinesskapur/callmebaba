@@ -2,7 +2,10 @@ import pandas as pd
 from typing import List, Dict
 import warnings
 import os
+import json
+import time
 import requests
+import ccxt
 warnings.filterwarnings('ignore')
 
 from skills.base import BaseSignalSkill, SignalResult
@@ -14,6 +17,7 @@ from skills.high_probability_confluence import HighProbability_Confluence
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+STATE_FILE = "master_state.json"
 
 def send_telegram_alert(msg):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
@@ -26,8 +30,22 @@ def send_telegram_alert(msg):
     except Exception as e:
         print(f"Telegram error: {e}")
 
+def load_state():
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f, indent=4)
+
 class MasterScanner:
     def __init__(self):
+        # SKILLS REMAIN 100% UNTOUCHED
         self.skills: Dict[str, BaseSignalSkill] = {
             "TripleRSI_MeanReversion": TripleRSI_MeanReversion(),
             "BB_RSI_MeanReversion": BB_RSI_MeanReversion(),
@@ -38,7 +56,6 @@ class MasterScanner:
 
     def scan(self, df: pd.DataFrame, ticker: str = "UNKNOWN", dry_run: bool = True) -> List[dict]:
         results = []
-        
         for skill_name, skill in self.skills.items():
             try:
                 res = skill.generate_signal(df)
@@ -49,7 +66,8 @@ class MasterScanner:
                         "confidence": res.confidence,
                         "reason": res.reason,
                         "stop_price": res.stop_price,
-                        "target_price": res.target_price
+                        "target_price": res.target_price,
+                        "timestamp": str(df.index[-1])
                     })
             except Exception as e:
                 print(f"[WARN] {skill_name} failed: {e}")
@@ -57,62 +75,69 @@ class MasterScanner:
         results.sort(key=lambda x: x['confidence'], reverse=True)
         
         if dry_run:
-            print(f"\n========================================================")
-            print(f"   MASTER SCANNER RESULTS (DRY RUN)")
-            print(f"========================================================")
-            print(f"Analyzed {len(self.skills)} skills on data ending: {df.index[-1]}")
-            
-            if not results:
-                print("No actionable signals found meeting minimum thresholds.")
-                
-            for r in results:
-                print(f"[{r['confidence']:>5.1f}%] {r['skill']} -> {r['signal']}")
-                print(f"         Reason: {r['reason']}")
-                print(f"         Stop: {r['stop_price']} | Target: {r['target_price']}")
-                print("-" * 56)
+            print(f"Analyzed {ticker}. Found {len(results)} signals.")
         else:
-            # Live Execution / Telegram Alert
+            state = load_state()
             for r in results:
-                msg = (
-                    f"?? <b>QUANT SYSTEM ALERT ({ticker})</b> ??\n\n"
-                    f"<b>Skill:</b> {r['skill']}\n"
-                    f"<b>Signal:</b> {r['signal']}\n"
-                    f"<b>Confidence:</b> {r['confidence']:.1f}%\n"
-                    f"<b>Reason:</b> {r['reason']}\n\n"
-                    f"<b>Stop Loss:</b> {r['stop_price']:.2f}\n"
-                    f"<b>Target:</b> {r['target_price']:.2f}\n"
-                )
-                send_telegram_alert(msg)
+                # Create a unique ID for this exact signal on this exact candle
+                sig_id = f"{ticker}_{r['skill']}_{r['timestamp']}"
+                
+                # Only send if we haven't sent this exact signal already
+                if sig_id not in state:
+                    msg = (
+                        f"?? <b>QUANT SYSTEM ALERT ({ticker})</b> ??\n\n"
+                        f"<b>Skill:</b> {r['skill']}\n"
+                        f"<b>Signal:</b> {r['signal']}\n"
+                        f"<b>Confidence:</b> {r['confidence']:.1f}%\n"
+                        f"<b>Reason:</b> {r['reason']}\n\n"
+                        f"<b>Stop Loss:</b> {r['stop_price']:.2f}\n"
+                        f"<b>Target:</b> {r['target_price']:.2f}\n"
+                        f"<b>Time:</b> {r['timestamp']}"
+                    )
+                    send_telegram_alert(msg)
+                    state[sig_id] = True
+            
+            # Keep state file from growing infinitely by removing very old entries
+            if len(state) > 1000:
+                state = dict(list(state.items())[-500:])
+            save_state(state)
                 
         return results
 
 if __name__ == "__main__":
-    import urllib.request
-    import io
+    print("Starting Multi-Coin Crypto Scan...")
+    exchange = ccxt.binance({'enableRateLimit': True})
     
-    # Twelve Data API Key from previous prompt
-    API_KEY = "7873877dad9f4f7fb1750fa5ef5eaa86" 
+    # 50+ Top Crypto Coins
+    TICKERS = [
+        "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT", 
+        "ADA/USDT", "AVAX/USDT", "DOGE/USDT", "DOT/USDT", "LINK/USDT", 
+        "MATIC/USDT", "LTC/USDT", "BCH/USDT", "UNI/USDT", "ATOM/USDT", 
+        "XLM/USDT", "ETC/USDT", "FIL/USDT", "VET/USDT", "ICP/USDT", 
+        "NEAR/USDT", "AAVE/USDT", "SNX/USDT", "STX/USDT", "APT/USDT", 
+        "OP/USDT", "ARB/USDT", "INJ/USDT", "RNDR/USDT", "GRT/USDT",
+        "MKR/USDT", "LDO/USDT", "QNT/USDT", "ALGO/USDT", "SAND/USDT", 
+        "MANA/USDT", "EOS/USDT", "THETA/USDT", "AXS/USDT", "APE/USDT", 
+        "FTM/USDT", "GALA/USDT", "CHZ/USDT", "CRV/USDT", "ZIL/USDT", 
+        "COMP/USDT", "KAVA/USDT", "ENJ/USDT", "BAT/USDT", "ZRX/USDT"
+    ]
     
-    def get_twelvedata(symbol, interval, outputsize=1000):
-        url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&apikey={API_KEY}&outputsize={outputsize}&format=csv"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        res = urllib.request.urlopen(req)
-        df = pd.read_csv(io.StringIO(res.read().decode('utf-8')), sep=';')
-        df.rename(columns={'datetime': 'timestamp'}, inplace=True)
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
-        df.set_index('timestamp', inplace=True)
-        return df.sort_index().astype(float)
-        
     scanner = MasterScanner()
     
-    # Example live run on SPY and QQQ
-    tickers = ["SPY", "QQQ"]
-    for ticker in tickers:
+    for ticker in TICKERS:
         try:
-            print(f"Fetching {ticker} (Daily) data...")
-            df = get_twelvedata(ticker, '1day', 500)
-            # Run LIVE (dry_run=False) so it sends to Telegram!
+            # Fetch 15-minute bars using CCXT (500 bars limit fits all indicator lookbacks)
+            bars = exchange.fetch_ohlcv(ticker, timeframe='15m', limit=500)
+            df = pd.DataFrame(bars, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            df.set_index('timestamp', inplace=True)
+            df = df.astype(float)
+            
+            # Run Live (dry_run=False triggers Telegram & State tracking)
             scanner.scan(df, ticker=ticker, dry_run=False)
+            
+            # Sleep briefly to respect Binance API limits
+            time.sleep(0.5)
         except Exception as e:
             print(f"Failed to fetch/scan {ticker}: {e}")
-
+            time.sleep(2)
