@@ -135,23 +135,18 @@ def main():
     hour = now.hour
     
     state = load_state()
-    send_telegram_alert("I'M CONNECTED!")
     
     # ONE-TIME PING IF STATE IS COMPLETELY EMPTY (First Run)
     if not state and not os.path.exists(STATE_FILE):
         send_telegram_alert("🟢 <b>Quant Scanner Status: ONLINE</b>\n\nGitHub Actions connection established. Tracking 1 signal per coin strictly.")
     
     # Determine target timeframes
-    tfs_to_scan = []
-    if 10 <= minute <= 20 or 40 <= minute <= 50: tfs_to_scan.append('15m')
-    elif 25 <= minute <= 35: tfs_to_scan.extend(['15m', '30m'])
-    elif 55 <= minute <= 59 or 0 <= minute <= 5:
+    tfs_to_scan = ['5m']
+    if 10 <= minute <= 22 or 40 <= minute <= 52: tfs_to_scan.append('15m')
+    elif 25 <= minute <= 37: tfs_to_scan.extend(['15m', '30m'])
+    elif 55 <= minute <= 59 or 0 <= minute <= 7:
         tfs_to_scan.extend(['15m', '30m', '1h'])
         if hour % 4 == 0: tfs_to_scan.append('4h')
-            
-    if not tfs_to_scan:
-        print(f"Time {now.strftime('%H:%M')} UTC does not align with close. Exiting.")
-        sys.exit(0)
         
     ex = ccxt.kraken({'enableRateLimit': True})
     symbols = ['BTC/USD', 'ETH/USD', 'SOL/USD', 'BNB/USD']
@@ -174,7 +169,7 @@ def main():
             
         for tf in tfs_to_scan:
             try:
-                htf_df = df_1h if tf in ['15m', '30m'] else df_1d
+                htf_df = df_1h if tf in ['5m', '15m', '30m'] else df_1d
                 signal = scan_timeframe(ex, symbol, tf, htf_df)
                 
                 if signal:
@@ -194,7 +189,7 @@ def main():
                     tp3 = price + (tp_dist*3) if direction == "LONG" else price - (tp_dist*3)
                     tp4 = price + (tp_dist*4) if direction == "LONG" else price - (tp_dist*4)
                     
-                    trend_type = "1H" if tf in ['15m', '30m'] else "1D"
+                    trend_type = "1H" if tf in ['5m', '15m', '30m'] else "1D"
                     
                     msg = f"<b>🚨 TIER A ({tf}) SIGNAL 🚨</b>\n\n"
                     msg += f"<b>Asset:</b> {symbol}\n<b>Direction:</b> {direction}\n<b>Entry:</b> ${price:,.2f}\n"
