@@ -136,16 +136,31 @@ def main():
     
     state = load_state()
     
-    if not state.get("TEST_SIGNAL_SENT_PEPE"):
-        test_msg = "<b>?? TIER A (5m) SIGNAL [TEST RUN] ??</b>\n\n"
-        test_msg += "<b>Asset:</b> PEPE/USD\n<b>Direction:</b> LONG\n<b>Entry:</b> $0.00001050\n"
-        test_msg += "<b>SL:</b> $0.00000980\n<b>TP1-4:</b> $0.00001100 | $0.00001150 | $0.00001200 | $0.00001250\n\n"
-        test_msg += "<b>Motive:</b> 5m Squeeze Breakout with 1H Trend Alignment\n"
-        test_msg += "<b>Live Chart Conf:</b> 1H > $0.00000900 | ADX: 35.2\n\n"
-        test_msg += "<i>[Untested Asset]: No historical backtest data for PEPE/USD. Trade with caution.</i>"
-        send_telegram_alert(test_msg)
-        state["TEST_SIGNAL_SENT_PEPE"] = True
-        save_state(state)
+    if not state.get("TEST_SIGNAL_LIVE_PEPE"):
+        try:
+            temp_ex = ccxt.kraken()
+            ticker = temp_ex.fetch_ticker('PEPE/USD')
+            live_price = ticker['last']
+            
+            atr = live_price * 0.015
+            sl = live_price - (atr * 2)
+            tp1 = live_price + (atr * 1.5)
+            tp2 = live_price + (atr * 2.0)
+            tp3 = live_price + (atr * 3.0)
+            tp4 = live_price + (atr * 4.0)
+            
+            test_msg = "<b>🚨 TIER A (5m) SIGNAL [LIVE PRICE TEST] 🚨</b>\n\n"
+            test_msg += f"<b>Asset:</b> PEPE/USD\n<b>Direction:</b> LONG\n<b>Entry:</b> ${live_price:,.8f}\n"
+            test_msg += f"<b>SL:</b> ${sl:,.8f}\n<b>TP1-4:</b> ${tp1:,.8f} | ${tp2:,.8f} | ${tp3:,.8f} | ${tp4:,.8f}\n\n"
+            test_msg += "<b>Motive:</b> 5m Squeeze Breakout with 1H Trend Alignment (TEST)\n"
+            test_msg += f"<b>Live Chart Conf:</b> 1H > ${(live_price * 0.95):,.8f} | ADX: 35.2\n\n"
+            test_msg += "<i>[Untested Asset]: No historical backtest data for PEPE/USD. Trade with caution.</i>"
+            
+            send_telegram_alert(test_msg)
+            state["TEST_SIGNAL_LIVE_PEPE"] = True
+            save_state(state)
+        except Exception as e:
+            print("Test signal error:", e)
         
     # ONE-TIME PING IF STATE IS COMPLETELY EMPTY (First Run)
     if not state and not os.path.exists(STATE_FILE):
