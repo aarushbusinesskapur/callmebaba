@@ -135,6 +135,7 @@ def main():
     hour = now.hour
     
     state = load_state()
+    send_telegram_alert("I'M CONNECTED!")
     
     # ONE-TIME PING IF STATE IS COMPLETELY EMPTY (First Run)
     if not state and not os.path.exists(STATE_FILE):
