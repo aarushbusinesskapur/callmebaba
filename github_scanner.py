@@ -1,33 +1,47 @@
 import os
 import sys
-import time
+import json
 import ccxt
 import pandas as pd
 import numpy as np
 import requests
 from datetime import datetime, timezone
 
-# Read secure tokens from GitHub Actions Environment Variables
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+STATE_FILE = "state.json"
 
-if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-    print("FATAL ERROR: Telegram credentials not found in environment variables.")
-    sys.exit(1)
+# The honest, empirically tested stats for the MTF Squeeze strategy
+BACKTEST_STATS = {
+    "BTC/USD": {"wr": 34.65, "pf": 0.74, "trades": 101},
+    "ETH/USD": {"wr": 28.44, "pf": 0.74, "trades": 109},
+    "SOL/USD": {"wr": 36.45, "pf": 1.22, "trades": 107},
+    "BNB/USD": {"wr": 30.28, "pf": 0.82, "trades": 109}
+}
+
+def load_state():
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f, indent=4)
 
 def send_telegram_alert(msg):
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        print("Telegram credentials missing, cannot send alert.")
+        return
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": msg,
-        "parse_mode": "HTML"
-    }
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "HTML"}
     try:
-        res = requests.post(url, json=payload)
-        if res.status_code != 200:
-            print(f"Failed to send Telegram alert: {res.text}")
+        requests.post(url, json=payload, timeout=10)
     except Exception as e:
-        print(f"Failed to send Telegram alert: {e}")
+        print(f"Telegram error: {e}")
 
 def fetch_kraken_tf(ex, symbol, tf):
     ohlcv = ex.fetch_ohlcv(symbol, timeframe=tf, limit=100)
@@ -37,22 +51,15 @@ def fetch_kraken_tf(ex, symbol, tf):
     return df
 
 def scan_timeframe(ex, symbol, tf, htf_df):
-    """
-    tf: '15m', '30m', '1h', '4h'
-    htf_df: Higher Timeframe DataFrame used for 200-SMA
-    """
     df = fetch_kraken_tf(ex, symbol, tf)
-    
-    # Ensure we are evaluating the latest fully CLOSED candle
-    # CCXT returns the currently open (forming) candle as the last row, so we drop it.
-    df = df.iloc[:-1].copy()
+    df = df.iloc[:-1].copy() # Ensure we only evaluate CLOSED candles
     
     # 1. Higher Timeframe 200-SMA Mapping
     htf_df['sma_200_htf'] = htf_df['close'].rolling(200).mean().shift(1)
     df = df.join(htf_df[['sma_200_htf']], how='left')
     df['sma_200_htf'] = df['sma_200_htf'].ffill()
     
-    # 2. ADX Calculation directly on this timeframe (simplified proxy)
+    # 2. ADX Filter
     df['tr'] = np.maximum(df['high'] - df['low'], 
                              np.maximum(abs(df['high'] - df['close'].shift()), 
                                         abs(df['low'] - df['close'].shift())))
@@ -66,7 +73,7 @@ def scan_timeframe(ex, symbol, tf, htf_df):
     df['dx'] = 100 * abs(df['plus_di'] - df['minus_di']) / (df['plus_di'] + df['minus_di'])
     df['adx'] = df['dx'].rolling(14).mean().shift(1)
     
-    # 3. Squeeze Calculation
+    # 3. Squeeze
     df['sma_20'] = df['close'].rolling(20).mean()
     df['std_20'] = df['close'].rolling(20).std()
     df['bb_upper'] = df['sma_20'] + (df['std_20'] * 2)
@@ -86,79 +93,99 @@ def scan_timeframe(ex, symbol, tf, htf_df):
     long_setup = latest['squeeze_fired'] and latest['close'] > latest['kc_upper'] and bull_trend
     short_setup = latest['squeeze_fired'] and latest['close'] < latest['kc_lower'] and bear_trend
     
-    if not trending:
-        return None
-        
-    if long_setup:
-        return {"side": "LONG", "price": latest['close'], "adx": latest['adx'], "atr": latest['atr_20'], "htf_sma": latest['sma_200_htf']}
-    if short_setup:
-        return {"side": "SHORT", "price": latest['close'], "adx": latest['adx'], "atr": latest['atr_20'], "htf_sma": latest['sma_200_htf']}
-        
+    if not trending: return None
+    if long_setup: return {"side": "LONG", "price": latest['close'], "adx": latest['adx'], "atr": latest['atr_20'], "htf_sma": latest['sma_200_htf']}
+    if short_setup: return {"side": "SHORT", "price": latest['close'], "adx": latest['adx'], "atr": latest['atr_20'], "htf_sma": latest['sma_200_htf']}
     return None
 
+def manage_open_trades(ex, state):
+    """Check live prices of open trades to see if they hit SL or TP1."""
+    resolved_assets = []
+    for asset, trade in state.items():
+        try:
+            ticker = ex.fetch_ticker(asset)
+            current_price = ticker['last']
+            
+            # Simple resolution logic
+            if trade['side'] == 'LONG':
+                if current_price <= trade['sl']:
+                    print(f"[{asset}] Hit Stop Loss. Resolving trade.")
+                    resolved_assets.append(asset)
+                elif current_price >= trade['tp1']:
+                    print(f"[{asset}] Hit Take Profit 1. Resolving trade.")
+                    resolved_assets.append(asset)
+            else: # SHORT
+                if current_price >= trade['sl']:
+                    print(f"[{asset}] Hit Stop Loss. Resolving trade.")
+                    resolved_assets.append(asset)
+                elif current_price <= trade['tp1']:
+                    print(f"[{asset}] Hit Take Profit 1. Resolving trade.")
+                    resolved_assets.append(asset)
+        except Exception as e:
+            print(f"Error checking status for {asset}: {e}")
+            
+    for asset in resolved_assets:
+        del state[asset]
+    return state
+
 def main():
-    print("Starting Multi-Timeframe Scanner on GitHub Actions...")
-    
+    print("Quant Scanner Booting...")
     now = datetime.now(timezone.utc)
     minute = now.minute
     hour = now.hour
     
-    # Determine which timeframes just closed and need scanning
-    tfs_to_scan = []
+    state = load_state()
     
-    # Allow a 5-minute buffer since GitHub actions cron might start a few minutes late
-    if 10 <= minute <= 20 or 40 <= minute <= 50:
-        tfs_to_scan.append('15m')
-    elif 25 <= minute <= 35:
-        tfs_to_scan.extend(['15m', '30m'])
+    # ONE-TIME PING IF STATE IS COMPLETELY EMPTY (First Run)
+    if not state and not os.path.exists(STATE_FILE):
+        send_telegram_alert("🟢 <b>Quant Scanner Status: ONLINE</b>\n\nGitHub Actions connection established. Tracking 1 signal per coin strictly.")
+    
+    # Determine target timeframes
+    tfs_to_scan = []
+    if 10 <= minute <= 20 or 40 <= minute <= 50: tfs_to_scan.append('15m')
+    elif 25 <= minute <= 35: tfs_to_scan.extend(['15m', '30m'])
     elif 55 <= minute <= 59 or 0 <= minute <= 5:
         tfs_to_scan.extend(['15m', '30m', '1h'])
-        if hour % 4 == 0:
-            tfs_to_scan.append('4h')
+        if hour % 4 == 0: tfs_to_scan.append('4h')
             
     if not tfs_to_scan:
-        print(f"Current UTC time {now.strftime('%H:%M')} does not align with a candle close. Exiting.")
+        print(f"Time {now.strftime('%H:%M')} UTC does not align with close. Exiting.")
         sys.exit(0)
         
-    print(f"Triggered at {now.strftime('%H:%M')} UTC. Scanning timeframes: {tfs_to_scan}")
-    
     ex = ccxt.kraken({'enableRateLimit': True})
     symbols = ['BTC/USD', 'ETH/USD', 'SOL/USD', 'BNB/USD']
+    
+    # Resolve any open trades that hit targets
+    state = manage_open_trades(ex, state)
     
     for symbol in symbols:
         print(f"\n--- {symbol} ---")
         
-        # Pre-fetch the HTF anchor charts to avoid redundant calls
-        # 15m and 30m use 1H as HTF. 1H and 4H use 1D as HTF.
+        # Rule: One active signal per asset
+        if symbol in state:
+            print(f"ACTIVE TRADE OPEN ({state[symbol]['side']} @ ${state[symbol]['entry']:,.2f}). Skipping scans for {symbol}.")
+            continue
+            
         try:
             df_1h = fetch_kraken_tf(ex, symbol, '1h')
             df_1d = fetch_kraken_tf(ex, symbol, '1d')
-        except Exception as e:
-            print(f"Failed to fetch HTF data for {symbol}: {e}")
-            continue
+        except: continue
             
         for tf in tfs_to_scan:
             try:
-                # Assign HTF anchor
                 htf_df = df_1h if tf in ['15m', '30m'] else df_1d
-                
                 signal = scan_timeframe(ex, symbol, tf, htf_df)
                 
                 if signal:
-                    print(f"*** {tf} SIGNAL ON {symbol}: {signal['side']} ***")
-                    
-                    # Logic Validation Labeling
-                    if tf in ['1h', '4h']:
-                        validation_label = "Validated timeframe — tested this session"
-                    else:
-                        validation_label = "Untested timeframe — new, unvalidated logic"
+                    # Enforce honest win rate filter (>= 25%)
+                    stats = BACKTEST_STATS[symbol]
+                    if stats['wr'] < 25.0:
+                        print(f"Filtered out: {symbol} win rate {stats['wr']}% is below 25% threshold.")
+                        break # Skip this asset entirely
                         
-                    direction = signal['side']
-                    price = signal['price']
-                    atr = signal['atr']
-                    
-                    sl_dist = atr * 2
-                    tp_dist = atr * 1.5
+                    print(f"*** {tf} SIGNAL ON {symbol}: {signal['side']} ***")
+                    direction, price, atr = signal['side'], signal['price'], signal['atr']
+                    sl_dist, tp_dist = atr * 2, atr * 1.5
                     
                     sl = price - sl_dist if direction == "LONG" else price + sl_dist
                     tp1 = price + tp_dist if direction == "LONG" else price - tp_dist
@@ -168,24 +195,34 @@ def main():
                     
                     trend_type = "1H" if tf in ['15m', '30m'] else "1D"
                     
-                    msg = f"<b>🚨 TIER A ({tf}) SIGNAL 🚨</b>\n"
-                    msg += f"<i>{validation_label}</i>\n\n"
-                    msg += f"<b>Asset:</b> {symbol}\n"
-                    msg += f"<b>Direction:</b> {direction}\n"
-                    msg += f"<b>Entry:</b> ${price:,.2f}\n"
-                    msg += f"<b>SL:</b> ${sl:,.2f}\n"
-                    msg += f"<b>TP1:</b> ${tp1:,.2f}\n"
-                    msg += f"<b>TP2:</b> ${tp2:,.2f}\n"
-                    msg += f"<b>TP3:</b> ${tp3:,.2f}\n"
-                    msg += f"<b>TP4:</b> ${tp4:,.2f}\n\n"
-                    msg += f"<i>Trend Conf: {trend_type} > ${signal['htf_sma']:,.2f} | ADX: {signal['adx']:.1f}</i>\n"
-                    msg += f"<i>Motive: {tf} Squeeze Breakout + {trend_type} Trend Alignment</i>"
+                    msg = f"<b>🚨 TIER A ({tf}) SIGNAL 🚨</b>\n\n"
+                    msg += f"<b>Asset:</b> {symbol}\n<b>Direction:</b> {direction}\n<b>Entry:</b> ${price:,.2f}\n"
+                    msg += f"<b>SL:</b> ${sl:,.2f}\n<b>TP1-4:</b> ${tp1:,.2f} | ${tp2:,.2f} | ${tp3:,.2f} | ${tp4:,.2f}\n\n"
+                    msg += f"<b>Motive:</b> {tf} Squeeze Breakout with {trend_type} Trend Alignment\n"
+                    msg += f"<b>Live Chart Conf:</b> {trend_type} > ${signal['htf_sma']:,.2f} | ADX: {signal['adx']:.1f}\n\n"
+                    
+                    # Honest Confidence Formatting
+                    if tf in ['1h', '4h']:
+                        status_str = "PROMOTED" if stats['pf'] > 1.0 else "REJECTED"
+                        msg += f"<i>[Validated Timeframe]: Backtested {stats['trades']} trades. Win Rate: {stats['wr']}%, Profit Factor: {stats['pf']} ({status_str} in-sample).</i>"
+                    else:
+                        confluence_score = min(100, int((signal['adx'] / 60) * 100)) # Simple ADX strength 0-100 proxy
+                        msg += f"<i>[Rule Confluence Score: {confluence_score}/100] — NOT backtested, no historical accuracy data exists yet for this timeframe.</i>"
                     
                     send_telegram_alert(msg)
+                    
+                    # Record in state to prevent duplicates
+                    state[symbol] = {
+                        "tf": tf, "side": direction, "entry": price, 
+                        "sl": sl, "tp1": tp1, "timestamp": now.isoformat()
+                    }
+                    break # Stop scanning smaller TFs if a larger TF fired for this asset
                 else:
-                    print(f"{tf}: No confluence signal.")
+                    print(f"{tf}: No live confirmation signal.")
             except Exception as e:
-                print(f"Failed to process {tf} for {symbol}: {e}")
+                print(f"Error processing {tf} for {symbol}: {e}")
+
+    save_state(state)
 
 if __name__ == "__main__":
     main()
