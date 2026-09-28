@@ -1,0 +1,160 @@
+RAW VAULT TRADE LOG (PHASE 5)
+=========================================
+Total Trades: 26
+
+Trade 1:
+  Asset:      BNBUSDT
+  Entry Time: 2024-11-30 01:00:00+00:00
+  Direction:  SHORT
+  PnL:        $-197.88
+----------------------------------------
+Trade 2:
+  Asset:      SOLUSDT
+  Entry Time: 2024-12-08 05:00:00+00:00
+  Direction:  SHORT
+  PnL:        $590.62
+----------------------------------------
+Trade 3:
+  Asset:      BNBUSDT
+  Entry Time: 2024-12-15 14:00:00+00:00
+  Direction:  LONG
+  PnL:        $-213.50
+----------------------------------------
+Trade 4:
+  Asset:      BNBUSDT
+  Entry Time: 2024-12-25 00:00:00+00:00
+  Direction:  LONG
+  PnL:        $-203.06
+----------------------------------------
+Trade 5:
+  Asset:      BNBUSDT
+  Entry Time: 2024-12-27 06:00:00+00:00
+  Direction:  LONG
+  PnL:        $137.02
+----------------------------------------
+Trade 6:
+  Asset:      BNBUSDT
+  Entry Time: 2025-01-02 08:00:00+00:00
+  Direction:  LONG
+  PnL:        $-201.13
+----------------------------------------
+Trade 7:
+  Asset:      BTCUSDT
+  Entry Time: 2025-01-04 20:00:00+00:00
+  Direction:  LONG
+  PnL:        $-250.94
+----------------------------------------
+Trade 8:
+  Asset:      BTCUSDT
+  Entry Time: 2025-01-11 21:00:00+00:00
+  Direction:  LONG
+  PnL:        $-234.26
+----------------------------------------
+Trade 9:
+  Asset:      SOLUSDT
+  Entry Time: 2025-02-23 01:00:00+00:00
+  Direction:  SHORT
+  PnL:        $1686.30
+----------------------------------------
+Trade 10:
+  Asset:      ETHUSDT
+  Entry Time: 2025-02-27 14:00:00+00:00
+  Direction:  SHORT
+  PnL:        $295.76
+----------------------------------------
+Trade 11:
+  Asset:      SOLUSDT
+  Entry Time: 2025-02-28 00:00:00+00:00
+  Direction:  SHORT
+  PnL:        $-199.97
+----------------------------------------
+Trade 12:
+  Asset:      SOLUSDT
+  Entry Time: 2025-03-01 10:00:00+00:00
+  Direction:  SHORT
+  PnL:        $-200.23
+----------------------------------------
+Trade 13:
+  Asset:      BTCUSDT
+  Entry Time: 2025-03-01 21:00:00+00:00
+  Direction:  LONG
+  PnL:        $-101.55
+----------------------------------------
+Trade 14:
+  Asset:      SOLUSDT
+  Entry Time: 2025-03-13 16:00:00+00:00
+  Direction:  SHORT
+  PnL:        $-199.75
+----------------------------------------
+Trade 15:
+  Asset:      BNBUSDT
+  Entry Time: 2025-03-20 00:00:00+00:00
+  Direction:  LONG
+  PnL:        $198.42
+----------------------------------------
+Trade 16:
+  Asset:      ETHUSDT
+  Entry Time: 2025-03-21 12:00:00+00:00
+  Direction:  SHORT
+  PnL:        $-208.62
+----------------------------------------
+Trade 17:
+  Asset:      BTCUSDT
+  Entry Time: 2025-04-05 12:00:00+00:00
+  Direction:  SHORT
+  PnL:        $1108.11
+----------------------------------------
+Trade 18:
+  Asset:      ETHUSDT
+  Entry Time: 2025-04-05 12:00:00+00:00
+  Direction:  SHORT
+  PnL:        $1958.75
+----------------------------------------
+Trade 19:
+  Asset:      SOLUSDT
+  Entry Time: 2025-04-05 12:00:00+00:00
+  Direction:  SHORT
+  PnL:        $1026.76
+----------------------------------------
+Trade 20:
+  Asset:      ETHUSDT
+  Entry Time: 2025-04-11 09:00:00+00:00
+  Direction:  LONG
+  PnL:        $205.03
+----------------------------------------
+Trade 21:
+  Asset:      ETHUSDT
+  Entry Time: 2025-04-13 11:00:00+00:00
+  Direction:  SHORT
+  PnL:        $-203.00
+----------------------------------------
+Trade 22:
+  Asset:      BTCUSDT
+  Entry Time: 2025-04-13 13:00:00+00:00
+  Direction:  SHORT
+  PnL:        $-201.18
+----------------------------------------
+Trade 23:
+  Asset:      SOLUSDT
+  Entry Time: 2025-04-13 13:00:00+00:00
+  Direction:  SHORT
+  PnL:        $-200.87
+----------------------------------------
+Trade 24:
+  Asset:      BTCUSDT
+  Entry Time: 2025-04-15 03:00:00+00:00
+  Direction:  LONG
+  PnL:        $-218.90
+----------------------------------------
+Trade 25:
+  Asset:      ETHUSDT
+  Entry Time: 2025-04-17 14:00:00+00:00
+  Direction:  SHORT
+  PnL:        $-209.85
+----------------------------------------
+Trade 26:
+  Asset:      BTCUSDT
+  Entry Time: 2025-04-18 10:00:00+00:00
+  Direction:  SHORT
+  PnL:        $-212.88
+----------------------------------------

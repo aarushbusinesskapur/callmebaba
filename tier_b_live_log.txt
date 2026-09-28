@@ -1,0 +1,88 @@
+
+==================================================
+TIER B (PHASE 5) LIVE EXECUTOR - KRAKEN FUTURES
+Timestamp: 2026-09-27T01:28:16.969138+00:00
+==================================================
+
+--- BTC/USD:USD ---
+Current Price:   $84,326.00
+Funding Z-Score: -0.2519 (Mean: 0.000002, Std: 0.000009)
+Compression:     Rank 0.2222 (Prev: 0.2099 -> EXPANDING)
+Status:          No signal triggered.
+
+--- ETH/USD:USD ---
+Current Price:   $2,692.70
+Funding Z-Score: -0.1801 (Mean: 0.000003, Std: 0.000010)
+Compression:     Rank 0.2222 (Prev: 0.2099 -> EXPANDING)
+Status:          No signal triggered.
+
+--- SOL/USD:USD ---
+Current Price:   $120.78
+Funding Z-Score: -0.3893 (Mean: -0.000001, Std: 0.000021)
+Compression:     Rank 0.0123 (Prev: 0.0370 -> COMPRESSED)
+Status:          No signal triggered.
+
+--- BNB/USD:USD ---
+Current Price:   $773.11
+Funding Z-Score: -1.1324 (Mean: 0.000002, Std: 0.000017)
+Compression:     Rank 0.1235 (Prev: 0.1358 -> COMPRESSED)
+Status:          No signal triggered.
+
+==================================================
+TIER B (PHASE 5) LIVE EXECUTOR - KRAKEN FUTURES
+Timestamp: 2026-09-27T01:30:27.430787+00:00
+==================================================
+
+--- BTC/USD:USD ---
+Current Price:   $84,309.00
+Funding Z-Score: -0.2520 (Mean: 0.000002, Std: 0.000009)
+Compression:     Rank 0.2222 (Prev: 0.2099 -> EXPANDING)
+Status:          No signal triggered.
+
+--- ETH/USD:USD ---
+Current Price:   $2,692.40
+Funding Z-Score: -0.1801 (Mean: 0.000003, Std: 0.000010)
+Compression:     Rank 0.2222 (Prev: 0.2099 -> EXPANDING)
+Status:          No signal triggered.
+
+--- SOL/USD:USD ---
+Current Price:   $120.81
+[ANOMALY] Implausible Z-Score Detected: 12.5000
+Funding Z-Score: 12.5000 (Mean: -0.000001, Std: 0.000021)
+Compression:     Rank 0.0123 (Prev: 0.0370 -> COMPRESSED)
+Status:          No signal triggered.
+
+--- BNB/USD:USD ---
+Current Price:   $772.55
+Funding Z-Score: -1.1326 (Mean: 0.000002, Std: 0.000017)
+Compression:     Rank 0.1235 (Prev: 0.1358 -> COMPRESSED)
+Status:          No signal triggered.
+
+==================================================
+TIER B (PHASE 5) LIVE EXECUTOR - KRAKEN FUTURES
+Timestamp: 2026-09-27T01:31:28.372051+00:00
+==================================================
+
+--- BTC/USD:USD ---
+Current Price:   $84,335.00
+Funding Z-Score: -0.2519 (Mean: 0.000002, Std: 0.000009)
+Compression:     Rank 0.2222 (Prev: 0.2099 -> EXPANDING)
+Status:          No signal triggered.
+
+--- ETH/USD:USD ---
+Current Price:   $2,692.90
+Funding Z-Score: -0.1801 (Mean: 0.000003, Std: 0.000010)
+Compression:     Rank 0.2222 (Prev: 0.2099 -> EXPANDING)
+Status:          No signal triggered.
+
+--- SOL/USD:USD ---
+Current Price:   $120.86
+Funding Z-Score: -0.3891 (Mean: -0.000001, Std: 0.000021)
+Compression:     Rank 0.0123 (Prev: 0.0370 -> COMPRESSED)
+Status:          No signal triggered.
+
+--- BNB/USD:USD ---
+Current Price:   $772.65
+Funding Z-Score: -1.1324 (Mean: 0.000002, Std: 0.000017)
+Compression:     Rank 0.1235 (Prev: 0.1358 -> COMPRESSED)
+Status:          No signal triggered.

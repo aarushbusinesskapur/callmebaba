@@ -1,0 +1,19 @@
+BAR-BY-BAR TRAILING STOP TRACE
+===============================
+
+--- Bar 1 (2025-01-01 01:00:00+00:00) ---
+Price Action: High 112, Low 104
+Stop Level AT START of bar: 90.0
+-> EVALUATION: Low (104) > Stop (90.0). Position HELD.
+-> UPDATE: New High (112) pulled Stop up to 102.0
+
+--- Bar 2 (2025-01-01 02:00:00+00:00) ---
+Price Action: High 118, Low 108
+Stop Level AT START of bar: 102.0
+-> EVALUATION: Low (108) > Stop (102.0). Position HELD.
+-> UPDATE: New High (118) pulled Stop up to 108.0
+
+--- Bar 3 (2025-01-01 03:00:00+00:00) ---
+Price Action: High 125, Low 105
+Stop Level AT START of bar: 108.0
+-> EVALUATION: Low (105) hit Stop (108.0). Position CLOSED.
