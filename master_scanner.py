@@ -106,7 +106,7 @@ class MasterScanner:
 
 if __name__ == "__main__":
     print("Starting Multi-Coin Crypto Scan...")
-    exchange = ccxt.binance({'enableRateLimit': True})
+    exchange = ccxt.bybit({'enableRateLimit': True, 'options': {'defaultType': 'spot'}})
     
     # 50+ Top Crypto Coins
     TICKERS = [
@@ -141,3 +141,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Failed to fetch/scan {ticker}: {e}")
             time.sleep(2)
+
